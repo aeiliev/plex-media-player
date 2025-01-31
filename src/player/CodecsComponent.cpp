@@ -71,6 +71,16 @@ static QSet<QString> g_systemVideoDecoderWhitelist = {
   "mpeg2_mmal",
   "mpeg4_mmal",
   "vc1_mmal",
+  // RK35XX
+  "av1_rkmpp",
+  "h263_rkmpp",
+  "h264_rkmpp",
+  "hevc_rkmpp",
+  "mpeg1_rkmpp",
+  "mpeg2_rkmpp",
+  "mpeg4_rkmpp",
+  "vp8_rkmpp",
+  "vp9_rkmpp",
 };
 
 static QSet<QString> g_systemAudioDecoderWhitelist = {
@@ -270,6 +280,9 @@ bool CodecDriver::isSystemCodec() const
     return true;
   // Linux on RPI
   if (driver.endsWith("_mmal"))
+    return true;
+  // Linux on RK35XX
+  if (driver.endsWith("_rkmpp"))
     return true;
   // Not really a system codec, but treated as such for convenience
   if (driver.endsWith("_eae"))
@@ -1205,7 +1218,7 @@ static CodecDriver selectBestDecoder(const StreamInfo& stream)
       // on the other hand, always prefer whitelisted system codecs
       if ((codec.isWhitelistedSystemAudioCodec() && useSystemAudioDecoders()) ||
           (codec.isWhitelistedSystemVideoCodec() && useSystemVideoDecoders()))
-        score = 10;
+        score = 20;
       if (codec.format == "h264")
       {
         // Avoid using system video decoders for h264 profiles usually not supported.
@@ -1242,6 +1255,23 @@ static CodecDriver selectBestDecoder(const StreamInfo& stream)
       else
         score = 5;
     }
+
+    QString codecInfo;
+    codecInfo += QString("type=") + (codec.type == CodecType::Decoder ? "Decoder" : "Encoder") + ",";
+    codecInfo += QString("format=") + codec.format + ",";
+    codecInfo += QString("driver=") + codec.driver + ",";
+    codecInfo += QString("present=") + QString::number(codec.present) + ",";
+    codecInfo += QString("external=") + QString::number(codec.external) + ",";
+    codecInfo += QString("mangledName=") + codec.getMangledName() + ",";
+    codecInfo += QString("fileName=") + codec.getFileName() + ",";
+    codecInfo += QString("path=") + codec.getPath() + ",";
+    codecInfo += QString("isSystemCodec=") + QString::number(codec.isSystemCodec()) + ",";
+    codecInfo += QString("systemCodecType=") + codec.getSystemCodecType() + ",";
+    codecInfo += QString("isWhitelistedSystemAudioCodec=") + QString::number(codec.isWhitelistedSystemAudioCodec()) + ",";
+    codecInfo += QString("isWhitelistedSystemVideoCodec=") + QString::number(codec.isWhitelistedSystemVideoCodec()) + ",";
+    codecInfo += QString("valid=") + QString::number(codec.valid()) + ",";
+    codecInfo += QString("score=") + QString::number(score);
+    QLOG_INFO() << "CodecInfo: " << qPrintable(codecInfo);
 
     if (score > bestScore && score >= 0)
     {
